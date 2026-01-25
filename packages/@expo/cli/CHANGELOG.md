@@ -10,6 +10,8 @@
 
 ### 🐛 Bug fixes
 
+- Fix loader URL resolution for nested `/index` paths ([#42629](https://github.com/expo/expo/pull/42629) by [@hassankhan](https://github.com/hassankhan))
+
 ### 💡 Others
 
 ## 55.0.4 — 2026-01-27
