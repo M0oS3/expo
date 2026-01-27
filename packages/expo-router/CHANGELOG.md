@@ -14,6 +14,7 @@
 
 - fix toolbar placement updates ([#42585](https://github.com/expo/expo/pull/42585) by [@Ubax](https://github.com/Ubax))
 - [ios] activate native zoom preventDismissal only when hook is used ([#42533](https://github.com/expo/expo/pull/42533) by [@Ubax](https://github.com/Ubax))
+- Fix RSC support in development ([#42617](https://github.com/expo/expo/pull/42617) by [@hassankhan](https://github.com/hassankhan))
 
 ### 💡 Others
 
