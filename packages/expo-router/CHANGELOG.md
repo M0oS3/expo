@@ -8,6 +8,7 @@
 
 - improve assignment of Stack.Header props to Stack options ([#42544](https://github.com/expo/expo/pull/42544) by [@Ubax](https://github.com/Ubax))
 - fallback to title when label is not present in Stack.Toolbar.Menu ([#42531](https://github.com/expo/expo/pull/42531) by [@Ubax](https://github.com/Ubax))
+- Add asChild prop to Stack.Screen.Title ([#42650](https://github.com/expo/expo/pull/42650) by [@Ubax](https://github.com/Ubax))
 
 ### 🐛 Bug fixes
 
