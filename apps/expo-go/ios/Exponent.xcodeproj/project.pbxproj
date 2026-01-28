@@ -117,6 +117,32 @@
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B5E49B5A1D1346FA00AA6437 /* Exceptions for "Exponent" folder in "Expo Go" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Supporting/Info.plist,
+			);
+			target = 78CEE2BF1ACD07D70095B124 /* Expo Go */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		XXEXPOCLIENTXXXXXXXXXXXX /* Client */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Client;
+			sourceTree = "<group>";
+		};
+		XXEXPONENTXXXXXXXXXXXXXX /* Exponent */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B5E49B5A1D1346FA00AA6437 /* Exceptions for "Exponent" folder in "Expo Go" target */,
+			);
+			path = Exponent;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		78CEE2BD1ACD07D70095B124 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
