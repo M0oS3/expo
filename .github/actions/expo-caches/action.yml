@@ -50,7 +50,7 @@ inputs:
 outputs:
   yarn-workspace-hit:
     description: 'Returns true, if yarn workspace cache is up-to-date'
-    value: steps.workspace-modules-cache.outputs.cache-hit
+    value: ${{ steps.workspace-modules-cache.outputs.cache-hit }}
   yarn-tools-hit:
     description: 'Returns true, if yarn /tools cache is up-to-date'
     value: steps.tools-modules-cache.outputs.cache-hit
@@ -94,6 +94,8 @@ runs:
           packages/@expo/*/node_modules
           react-native-lab/react-native/node_modules
         key: ${{ runner.os }}-workspace-modules-${{ hashFiles('yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-workspace-modules-
 
     - name: ♻️ Restore /tools node modules and bins
       if: inputs.yarn-tools == 'true'

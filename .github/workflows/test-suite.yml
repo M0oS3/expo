@@ -278,8 +278,11 @@ jobs:
           yarn-workspace: 'true'
           yarn-tools: 'true'
           react-native-gradle-downloads: 'true'
+      - name: Debug
+        shell: bash
+        run: |
+          echo "Workspace cache hit: ${{ steps.expo-caches.outputs.yarn-workspace-hit }}"
       - name: 🧶 Install workspace node modules
-        if: steps.expo-caches.outputs.yarn-workspace-hit != 'true'
         run: yarn install --frozen-lockfile
       - name: 🧶 Install image comparison server node modules
         run: yarn install --frozen-lockfile
