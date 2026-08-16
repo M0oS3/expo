@@ -60,7 +60,7 @@ test.describe('static loaders in production', () => {
     expect(JSON.parse(loaderDataContent!)).toEqual({ params: { postId: 'static-post-1' } });
   });
 
-  test('caches loader data for subsequent navigations', async ({ page }) => {
+  test('revalidates headerless loader data on every fresh mount', async ({ page }) => {
     const loaderRequests: string[] = [];
     page.on('request', (request) => {
       if (request.url().includes('/_expo/loaders/')) {
@@ -83,8 +83,13 @@ test.describe('static loaders in production', () => {
     await page.click('a[href="/posts/static-post-1"]');
     await page.waitForSelector('[data-testid="loader-result"]');
 
-    // Should not make additional requests for cached static-post-1
-    expect(loaderRequests.length).toBe(2);
+    expect(loaderRequests).toEqual([
+      expect.stringContaining('/_expo/loaders/posts/static-post-1'),
+      expect.stringContaining('/_expo/loaders/index'),
+      expect.stringContaining('/_expo/loaders/posts/static-post-2'),
+      expect.stringContaining('/_expo/loaders/index'),
+      expect.stringContaining('/_expo/loaders/posts/static-post-1'),
+    ]);
   });
 
   test('handles loader module fetch errors gracefully', async ({ page }) => {
@@ -119,15 +124,18 @@ test.describe('static loaders in production', () => {
   test('navigates from route without loader to route with loader', async ({ page }) => {
     const pageErrors = pageCollectErrors(page);
 
-    // Start at index route (no loader)
-    await page.goto(expoServe.url.href);
+    const url = new URL(expoServe.url.href);
+    url.pathname = '/no-loader';
 
-    // Navigate to second route (has loader)
-    await page.click('a[href="/second"]');
+    // Start on no loader route
+    await page.goto(url.toString());
+
+    // Navigate to index route (has loader)
+    await page.click('a[href="/"]');
     await page.waitForSelector('[data-testid="loader-result"]');
 
     const loaderDataContent = await page.locator('[data-testid="loader-result"]').textContent();
-    expect(JSON.parse(loaderDataContent!)).toEqual({ data: 'second' });
+    expect(JSON.parse(loaderDataContent!)).toEqual({ data: 'root-index' });
 
     expect(pageErrors.all).toEqual([]);
   });

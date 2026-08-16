@@ -10,6 +10,7 @@ class RouterToolbarItemView: RouterViewWithLogger {
   // Properties allowing in-place updates
   @ReactiveProp var title: String?
   @ReactiveProp var systemImageName: String?
+  @ReactiveProp var xcassetName: String?
   var customImage: SharedRef<UIImage>? {
     didSet {
       performUpdate()
@@ -34,7 +35,7 @@ class RouterToolbarItemView: RouterViewWithLogger {
   // This property is not applied in this component, but read by the host
   @ReactiveProp var routerHidden: Bool = false
 
-  var host: RouterToolbarHostView?
+  weak var host: RouterToolbarHostView?
   private var currentBarButtonItem: UIBarButtonItem?
 
   let onSelected = EventDispatcher()
@@ -140,6 +141,9 @@ class RouterToolbarItemView: RouterViewWithLogger {
         // Use the UIImage from the SharedRef
         let renderingMode: UIImage.RenderingMode = imageRenderingMode == .template ? .alwaysTemplate : .alwaysOriginal
         item.image = customImage.ref.withRenderingMode(renderingMode)
+      } else if let xcassetName {
+        let renderingMode: UIImage.RenderingMode = imageRenderingMode == .template ? .alwaysTemplate : .alwaysOriginal
+        item.image = UIImage(named: xcassetName)?.withRenderingMode(renderingMode)
       } else if let systemImageName {
         // Fallback to SF Symbol
         item.image = UIImage(systemName: systemImageName)
@@ -179,13 +183,15 @@ class RouterToolbarItemView: RouterViewWithLogger {
           badge.foregroundColor = foregroundColor
         }
         if badgeConfig.fontFamily != nil || badgeConfig.fontSize != nil
-          || badgeConfig.fontWeight != nil {
+          || badgeConfig.fontWeight != nil
+        {
           let font = RouterFontUtils.convertTitleStyleToFont(
             TitleStyle(
               fontFamily: badgeConfig.fontFamily,
               fontSize: badgeConfig.fontSize,
               fontWeight: badgeConfig.fontWeight
-            ))
+            )
+          )
           badge.font = font
         }
         item.badge = badge

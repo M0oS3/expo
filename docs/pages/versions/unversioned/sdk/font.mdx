@@ -26,7 +26,7 @@ import { SnackInline } from '~/ui/components/Snippet';
 
 There are two ways to add fonts to your app: using the `expo-font` config plugin (recommended for Android and iOS) or loading them at runtime (which works across all platforms including web).
 
-On Android and iOS, the plugin allows you to embed font files at build time which is more efficient than [`useFonts`](#usefontsmap) or [`loadAsync`](#loadasyncfontfamilyorfontmap-source). After you set up the config plugin and run [prebuild](/workflow/continuous-native-generation/#usage), you can render custom fonts right away. The plugin can be configured in different ways, see the [Fonts](/develop/user-interface/fonts/#with-expo-font-config-plugin) guide on how to use it.
+On Android and iOS, the plugin allows you to embed font files at build time which is more efficient than [`useFonts`](#usefonts) or [`loadAsync`](#loadasyncfontfamilyorfontmap-source). After you set up the config plugin and run [prebuild](/workflow/continuous-native-generation/#usage), you can render custom fonts right away. The plugin can be configured in different ways, see the [Fonts](/develop/user-interface/fonts/#with-expo-font-config-plugin) guide on how to use it.
 
 <ConfigPluginExample>
 
@@ -52,6 +52,9 @@ On Android and iOS, the plugin allows you to embed font files at build time whic
                 ]
               }
             ]
+          },
+          "ios": {
+            "fonts": ["./path/to/SourceSerif4-ExtraBold.ttf"]
           }
         }
       ]
@@ -67,20 +70,20 @@ On Android and iOS, the plugin allows you to embed font files at build time whic
     {
       name: 'fonts',
       description:
-        'An array of font definitions to link to the native project. The paths should be relative to the project root. On Android, the file name becomes the font family name. On iOS, the font family name is always taken directly from the font file and may not be the same as the file name &mdash; follow the [naming advice](/develop/user-interface/fonts/#how-to-determine-which-font-family-name-to-use) or use [`getLoadedFonts`](#getloadedfonts) to see what fonts are available.',
+        'An array of font definitions to link to the native project. The paths should be relative to the project root. On Android, the file name becomes the font family name. On iOS, the font family name is always taken directly from the font file and may not be the same as the file name — follow the [naming advice](/develop/user-interface/fonts/#how-to-determine-which-font-family-name-to-use) or use [`getLoadedFonts`](#getloadedfonts) to see what fonts are available.',
       default: '[]',
     },
     {
       name: 'android',
       description:
-        'An array of font definitions to link to the native project on Android. Use the object syntax to embed [xml fonts](https://developer.android.com/develop/ui/views/text-and-emoji/fonts-in-xml) with custom family name.',
-      default: '[]',
+        'An object with a `fonts` array of font definitions to link to the native project on Android. Use the object syntax within `fonts` to embed [xml fonts](https://developer.android.com/develop/ui/views/text-and-emoji/fonts-in-xml) with custom family name.',
+      default: '{}',
     },
     {
       name: 'ios',
       description:
-        'An array of font file paths to link to the native project on iOS. The font family name is taken directly from the font file.',
-      default: '[]',
+        'An object with a `fonts` array of font file paths to link to the native project on iOS. The font family name is taken directly from the font file.',
+      default: '{}',
     },
   ]}
 />

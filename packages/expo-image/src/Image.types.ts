@@ -1,15 +1,17 @@
 import type { NativeModule, SharedRef, SharedRefType } from 'expo';
-import {
+import type {
   ImageStyle as RNImageStyle,
   TextStyle,
   StyleProp,
   View,
   ViewProps,
   ViewStyle,
+  ColorValue,
 } from 'react-native';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
-import ExpoImage from './ExpoImage';
+import type ExpoImage from './ExpoImage';
+import type { ExpoImageIntegrationConfig } from './observe';
 
 export type ImageSource = {
   /**
@@ -63,6 +65,7 @@ export type ImageSource = {
    * Has no effect if `source` prop is not an array or has only 1 element.
    * Has no effect if `responsivePolicy` is not set to `static`.
    * Ignored if `blurhash` or `thumbhash` is provided (image hashes are never selected if passed in an array).
+   *
    * @platform web
    */
   webMaxViewportWidth?: number;
@@ -204,6 +207,9 @@ export interface ImageProps extends Omit<ViewProps, 'style' | 'children'> {
    * A color used to tint template images (a bitmap image where only the opacity matters).
    * The color is applied to every non-transparent pixel, causing the image's shape to adopt that color.
    * This effect is not applied to placeholders.
+   *
+   * Note that `useImage` options parameter also has a `tintColor` field.
+   * When you have a `useImage` as a `source` use its `tintColor` instead.
    * @default null
    */
   tintColor?: string | null;
@@ -223,7 +229,10 @@ export interface ImageProps extends Omit<ViewProps, 'style' | 'children'> {
    * - `'lazy'` - Defers loading until the image is near the viewport.
    * - `'eager'` - Loads the image immediately.
    *
-   * @default 'eager'
+   * Defaults to `'lazy'` when `responsivePolicy` is `'static'` (the default policy), because the
+   * `sizes="auto"` source selection used by `static` only takes effect on lazily-loaded images.
+   *
+   * @default `'lazy'` (when `responsivePolicy` is `'static'`, otherwise `'eager'`)
    * @platform web
    */
   loading?: 'lazy' | 'eager';
@@ -247,10 +256,11 @@ export interface ImageProps extends Omit<ViewProps, 'style' | 'children'> {
   /**
    * Controls the selection of the image source based on the container or viewport size on the web.
    *
-   * If set to `'static'`, the browser selects the correct source based on user's viewport width. Works with static rendering.
-   * Make sure to set the `'webMaxViewportWidth'` property on each source for best results.
-   * For example, if an image occupies 1/3 of the screen width, set the `'webMaxViewportWidth'` to 3x the image width.
-   * The source with the largest `'webMaxViewportWidth'` is used even for larger viewports.
+   * If set to `'static'`, the source is selected by the browser from a generated `srcset`/`sizes` pair. Works with static rendering.
+   * The generated `sizes` leads with the `auto` keyword, so supporting browsers select the source from the image's rendered layout size.
+   * This requires the image to be lazily loaded, which is why `static` defaults `loading` to `'lazy'` (pass `loading="eager"` to opt out,
+   * in which case `sizes="auto"` is ignored). For browsers that don't yet support `sizes="auto"`, `sizes` falls back to any per-source
+   * breakpoints (only emitted for sources that set the deprecated `webMaxViewportWidth`) and finally to `100vw`.
    *
    * If set to `'initial'`, the component will select the correct source during mount based on container size. Does not work with static rendering.
    *
@@ -426,6 +436,8 @@ export interface ImageProps extends Omit<ViewProps, 'style' | 'children'> {
    *
    * Set this prop to `false` to use the official standard-compliant [libwebp](https://github.com/webmproject/libwebp) codec for WebP images.
    * The default implementation from Apple is faster and uses less memory but may render animated images with incorrect blending or play them at the wrong framerate.
+   * Some animated WebP files also decode very slowly with Apple's codec, which can make the image take a long time to appear and keep a CPU core busy while it loads.
+   * If you run into that, try setting this prop to `false` to switch to libwebp instead.
    * @see https://github.com/SDWebImage/SDWebImage/wiki/Advanced-Usage#awebp-coder
    *
    * @default true
@@ -713,6 +725,39 @@ export type ImageTransition = {
     | 'sf:up-up'
     | 'sf:off-up'
     | null;
+
+  /**
+   * Skips the transition when an image first appears from a cache hit. Already-cached images are
+   * then shown instantly instead of re-animating on every mount, tab change, or scroll back into
+   * view.
+   *
+   * This only affects the first appearance of an image in a view. A later `source` change on a
+   * populated view always plays its transition. A visible placeholder still counts as the first
+   * appearance.
+   *
+   * - `'none'` - The transition always plays. This is the default.
+   * - `'memory'` - Skips the transition for images served from the in-memory cache.
+   * - `'all'` - Skips it for any cache hit, so only uncached (typically network) loads animate.
+   *
+   * Locally bundled assets are always instantly available, so both `'memory'` and `'all'` treat
+   * them as in-memory cache hits and skip their transition.
+   *
+   * @example
+   * ```tsx
+   * // Fade a list item in the first time it loads, but show it instantly
+   * // when it scrolls back into view.
+   * <Image
+   *   source={item.uri}
+   *   recyclingKey={item.id}
+   *   transition={{ duration: 300, skipOnCacheHit: 'all' }}
+   * />
+   * ```
+   *
+   * @default 'none'
+   * @platform android
+   * @platform ios
+   */
+  skipOnCacheHit?: 'none' | 'memory' | 'all' | null;
 };
 
 export type ImageLoadEventData = {
@@ -783,9 +828,21 @@ export declare class ImageRef extends SharedRef<'image'> {
 }
 
 /**
+ * Module-level events emitted by the native `ExpoImage` module.
  * @hidden
  */
-export declare class ImageNativeModule extends NativeModule {
+export type ImageModuleEvents = {
+  /**
+   * Fires from every relevant load path (`loadAsync`, `useImage`, and the rendered `<Image>` view)
+   * with the decoded pixel size.
+   */
+  imageLoaded: (event: { url: string; width: number; height: number }) => void;
+};
+
+/**
+ * @hidden
+ */
+export declare class ImageNativeModule extends NativeModule<ImageModuleEvents> {
   // TODO: Add missing function declarations
   Image: typeof ImageRef;
 
@@ -802,6 +859,8 @@ export declare class ImageNativeModule extends NativeModule {
 
   configureCache(config: ImageCacheConfig): void;
   getCachePathAsync(cacheKey: string): Promise<string | null>;
+  writeToCacheAsync(source: string | ImageRef, cacheKey: string): Promise<void>;
+  readFromCacheAsync(cacheKey: string): Promise<ImageRef | null>;
 
   generateBlurhashAsync(
     source: string | ImageRef,
@@ -811,7 +870,7 @@ export declare class ImageNativeModule extends NativeModule {
 }
 
 /**
- * An object with options for the [`useImage`](#useimage) hook.
+ * An object with options for the [`useImage`](#useimagesource-options-dependencies) hook.
  */
 export type ImageLoadOptions = {
   /**
@@ -823,6 +882,13 @@ export type ImageLoadOptions = {
    * If provided, the image will be automatically resized to not exceed this height in pixels, preserving its aspect ratio.
    */
   maxHeight?: number;
+
+  /**
+   * A color used to tint template images (a bitmap image where only the opacity matters).
+   * The color is applied to every non-transparent pixel, causing the image's shape to adopt that color.
+   * @default null
+   */
+  tintColor?: ColorValue | number;
 
   /**
    * Function to call when the image has failed to load. In addition to the error, it also provides a function that retries loading the image.
@@ -855,3 +921,16 @@ export type ImageCacheConfig = {
    */
   maxMemoryCount?: number;
 };
+
+// Register the `'expo-image'` key on expo-observe's open `ObserveIntegrationsConfig` interface via
+// declaration merging, so `Observe.configure({ integrations: { 'expo-image': ... } })` is suggested
+// and type-checked. The config type itself lives in `observe.ts` (imported at the top of this file).
+// This augmentation lives here, not in `observe.ts`, because `index.ts` reaches `observe.ts` only
+// through a runtime value import that is elided from the emitted `index.d.ts` — so an augmentation
+// there would not ship to consumers. `Image.types.ts` is re-exported via `export *`, which survives
+// declaration emit, so the augmentation is always in the package's public type graph.
+declare module 'expo-observe' {
+  interface ObserveIntegrationsConfig {
+    'expo-image'?: boolean | ExpoImageIntegrationConfig;
+  }
+}

@@ -1,9 +1,18 @@
 export * from './Widgets';
-export {
-  WidgetFamily,
-  WidgetBase,
-  ExpoLiveActivityEntry,
-  LiveActivityComponent,
+export type {
   ExpoWidgetsEvents,
+  LevelOfDetail,
+  LiveActivityComponent,
+  LiveActivityDismissalPolicy,
+  LiveActivityEnvironment,
+  LiveActivityEvents,
+  LiveActivityLayout,
+  PushTokenEvent,
+  PushToStartTokenEvent,
   UserInteractionEvent,
+  WidgetConfigurationEnum,
+  WidgetEnvironment,
+  WidgetFamily,
+  WidgetRenderingMode,
+  WidgetTimelineEntry,
 } from './Widgets.types';

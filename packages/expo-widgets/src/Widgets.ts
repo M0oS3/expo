@@ -1,112 +1,238 @@
-import { type EventSubscription } from 'expo-modules-core';
-import React from 'react';
+import type { EventSubscription } from 'expo';
+import { Platform } from 'react-native';
 
-import ExpoWidgetModule from './ExpoWidgets';
-import {
-  ExpoTimelineEntry,
+import ExpoWidgetsModule from './ExpoWidgets';
+import type {
   ExpoWidgetsEvents,
   LiveActivityComponent,
-  WidgetFamily,
-  WidgetBase,
+  LiveActivityDismissalPolicy,
+  NativeLiveActivity,
+  NativeLiveActivityFactory,
+  NativeWidgetObject,
+  PushTokenEvent,
+  WidgetConfigurationEnum,
+  WidgetEnvironment,
+  WidgetTimelineEntry,
 } from './Widgets.types';
-import { supportedFamilies } from './constants';
-import { serialize } from './serializer';
 
 /**
- * Starts a new Live Activity on iOS.
- * Live Activities display real-time information on the Lock Screen and in the Dynamic Island.
- * @param name The name/identifier of the Live Activity to start.
- * @param liveActivity A function that returns the Live Activity layout configuration.
- * @param url An optional deep link URL to open when the user taps the Live Activity.
- * @return The unique identifier of the started Live Activity.
+ * Represents a widget instance. Provides methods to manage the widget's timeline.
  */
-export const startLiveActivity = (
-  name: string,
-  liveActivity: LiveActivityComponent,
-  url?: string
-) => {
-  const text = serialize(liveActivity());
-  return ExpoWidgetModule.startLiveActivity(name, text, url);
-};
-
-/**
- * Updates an existing Live Activity with new content.
- * @param id The unique identifier of the Live Activity to update (returned from `startLiveActivity`).
- * @param name The name/identifier of the Live Activity.
- * @param liveActivity A function that returns the updated Live Activity layout configuration.
- */
-export const updateLiveActivity = (
-  id: string,
-  name: string,
-  liveActivity: LiveActivityComponent
-) => {
-  const text = serialize(liveActivity());
-  ExpoWidgetModule.updateLiveActivity(id, name, text);
-};
-
-/**
- * Updates a widget's timeline with multiple entries that will be displayed at scheduled times.
- * The widget system will automatically switch between entries based on their timestamps.
- * @param name The name/identifier of the widget to update.
- * @param dates An array of dates representing when each timeline entry should be displayed.
- * @param widget A function component that renders the widget content for a given set of props.
- * @param props Optional custom props to pass to the widget component.
- * @param updateFunction Optional name of a function to call for dynamic updates.
- * @template T The type of custom props passed to the widget.
- */
-export const updateWidgetTimeline = <T extends object>(
-  name: string,
-  dates: Date[],
-  widget: (p: WidgetBase<T>) => React.JSX.Element,
-  props?: T,
-  updateFunction?: string
-) => {
-  const fakeProps = Object.keys(props || {}).reduce(
-    (acc, key) => {
-      acc[key] = `{{${key}}}`;
-      return acc;
-    },
-    {} as Record<string, string>
-  );
-
-  const data: Record<WidgetFamily, ExpoTimelineEntry[]> = supportedFamilies
-    .map((family) => ({
-      family,
-      entries: dates.map((date) => ({
-        timestamp: date.getTime(),
-        content: widget({ date, family, ...(fakeProps as T) }),
-      })),
-    }))
-    .reduce(
-      (acc, { family, entries }) => {
-        acc[family] = entries;
-        return acc;
-      },
-      {} as Record<WidgetFamily, ExpoTimelineEntry[]>
+export class Widget<
+  PropsType extends object = object,
+  ConfigurationType extends object | undefined = undefined,
+> {
+  /** @hidden */
+  private nativeWidgetObject: NativeWidgetObject;
+  constructor(
+    name: string,
+    layout: (
+      props: PropsType,
+      environment: WidgetEnvironment<ConfigurationType>
+    ) => React.JSX.Element,
+    initialProps?: PropsType
+  ) {
+    this.nativeWidgetObject = new ExpoWidgetsModule.Widget(
+      name,
+      layout as unknown as string,
+      initialProps
     );
+  }
 
-  ExpoWidgetModule.updateWidget(name, serialize(data), props, updateFunction);
+  /**
+   * Force reloads the widget, causing it to refresh its content and timeline.
+   */
+  reload() {
+    this.nativeWidgetObject.reload();
+  }
 
-  ExpoWidgetModule.reloadWidget();
-};
+  /**
+   * Schedules a series of updates for the widget's content and reloads the widget.
+   * @param entries Timeline entries, each specifying a date and the props to display at that time.
+   */
+  updateTimeline(entries: WidgetTimelineEntry<PropsType>[]) {
+    if (Platform.OS === 'android') {
+      return;
+    }
+    this.nativeWidgetObject.updateTimeline(
+      entries.map((entry) => ({ timestamp: entry.date.getTime(), props: entry.props }))
+    );
+  }
+
+  /**
+   * Sets the widget's content to the given props immediately, without scheduling a timeline.
+   * @param props The properties to display in the widget.
+   */
+  updateSnapshot(props: PropsType) {
+    if (Platform.OS === 'android') {
+      this.nativeWidgetObject.updateSnapshot(props as Record<string, any>);
+    } else {
+      this.nativeWidgetObject.updateTimeline([{ timestamp: Date.now(), props }]);
+    }
+  }
+
+  /**
+   * Returns the current timeline entries for the widget, including past and future entries.
+   */
+  async getTimeline(): Promise<WidgetTimelineEntry<PropsType>[]> {
+    return (await this.nativeWidgetObject.getTimeline()).map((entry) => ({
+      date: new Date(entry.timestamp),
+      props: entry.props as PropsType,
+    }));
+  }
+
+  /**
+   * Replaces the runtime options for a dynamic enum configuration parameter.
+   * The app config values remain the fallback when no runtime options are set.
+   */
+  setConfigurationParameterEnum(
+    parameterName: keyof ConfigurationType & string,
+    options?: WidgetConfigurationEnum[]
+  ) {
+    this.nativeWidgetObject.setConfigurationParameterEnum(parameterName, options);
+  }
+}
 
 /**
- * Updates a widget with a single snapshot entry for the current time.
- * This is a convenience wrapper around `updateWidgetTimeline` for widgets that don't need multiple timeline entries.
- * @param name The name/identifier of the widget to update.
- * @param widget A function component that renders the widget content for a given set of props.
- * @param props Optional custom props to pass to the widget component.
- * @param updateFunction Optional name of a function to call for dynamic updates.
- * @template T The type of custom props passed to the widget.
+ * Represents a Live Activity instance. Provides methods to update its content and end it.
  */
-export const updateWidgetSnapshot = <T extends object>(
+export class LiveActivity<T extends object = object> {
+  /** @hidden */
+  private nativeLiveActivity: NativeLiveActivity;
+  constructor(nativeLiveActivity: NativeLiveActivity) {
+    this.nativeLiveActivity = nativeLiveActivity;
+  }
+
+  /**
+   * Updates the Live Activity's content. The UI reflects the new properties immediately.
+   * @param props The updated content properties.
+   * @param staleDate When set, the system may de-emphasize the activity after this date if content has not been refreshed.
+   */
+  update(props: T, staleDate?: Date): Promise<void> {
+    return this.nativeLiveActivity.update(JSON.stringify(props), staleDate?.getTime());
+  }
+
+  /**
+   * Ends the Live Activity.
+   * @param dismissalPolicy Controls when the Live Activity is removed from the Lock Screen after ending.
+   * Can be `'default'`, `'immediate'`, or `after(date)`.
+   * @param props Final content properties to update after the activity ends.
+   * @param contentDate The time the data in the payload was generated. If this is older than a previous update or push payload, the system ignores this update.
+   */
+  end(dismissalPolicy?: LiveActivityDismissalPolicy, props?: T, contentDate?: Date): Promise<void> {
+    const serializedProps = props ? JSON.stringify(props) : undefined;
+    if (
+      typeof dismissalPolicy === 'object' &&
+      dismissalPolicy !== null &&
+      'after' in dismissalPolicy
+    ) {
+      return this.nativeLiveActivity.end(
+        'after',
+        dismissalPolicy.after?.getTime(),
+        serializedProps,
+        contentDate?.getTime()
+      );
+    }
+    return this.nativeLiveActivity.end(
+      dismissalPolicy,
+      undefined,
+      serializedProps,
+      contentDate?.getTime()
+    );
+  }
+
+  /**
+   * Returns the push token for this Live Activity, used to send push notification updates via APNs.
+   * Returns `null` if push notifications are not enabled or the token is not yet available.
+   */
+  getPushToken(): Promise<string | null> {
+    return this.nativeLiveActivity.getPushToken();
+  }
+
+  /**
+   * Adds a listener for push token update events on this Live Activity instance.
+   * The token can be used to send content updates to this specific activity via APNs.
+   * @param listener Callback invoked when a new push token is available.
+   * @returns An event subscription that can be used to remove the listener.
+   */
+  addPushTokenListener(listener: (event: PushTokenEvent) => void): EventSubscription {
+    return this.nativeLiveActivity.addListener('onExpoWidgetsTokenReceived', listener);
+  }
+}
+
+/**
+ * Manages Live Activity instances of a specific type. Use it to start new activities and retrieve currently active ones.
+ */
+export class LiveActivityFactory<T extends object = object> {
+  /** @hidden */
+  private nativeLiveActivityFactory: NativeLiveActivityFactory;
+  constructor(name: string, layout: LiveActivityComponent<T>) {
+    this.nativeLiveActivityFactory = new ExpoWidgetsModule.LiveActivityFactory(
+      name,
+      layout as unknown as string
+    );
+  }
+
+  /**
+   * Starts a new Live Activity with the given properties.
+   * @param props The initial content properties for the Live Activity.
+   * @param url An optional URL to associate with the Live Activity, used for deep linking.
+   * @param staleDate When set, the system may de-emphasize the activity after this date if content has not been refreshed.
+   * @returns The new Live Activity instance.
+   */
+  start(props: T, url?: string, staleDate?: Date) {
+    return new LiveActivity<T>(
+      this.nativeLiveActivityFactory.start(JSON.stringify(props), url, staleDate?.getTime())
+    );
+  }
+
+  /**
+   * Returns all currently active instances of this Live Activity type.
+   */
+  getInstances() {
+    return this.nativeLiveActivityFactory
+      .getInstances()
+      .map((instance) => new LiveActivity<T>(instance));
+  }
+}
+
+/**
+ * Creates a dismissal policy that removes the Live Activity at the specified time within a four-hour window.
+ * @param date The date after which the Live Activity should be removed from the Lock Screen.
+ * @hidden
+ */
+export function after(date: Date): { after: Date } {
+  return { after: date };
+}
+
+/**
+ * Creates a Widget instance.
+ * @param name The widget name. Must match the `'name'` field in your widget configuration in the app config.
+ * @param widget The widget component, marked with the `'widget'` directive.
+ * @param initialProps The initial properties to display before the widget timeline is updated.
+ */
+export function createWidget<
+  PropsType extends object = object,
+  ConfigurationType extends object | undefined = undefined,
+>(
   name: string,
-  widget: (p: WidgetBase<T>) => React.JSX.Element,
-  props?: T,
-  updateFunction?: string // (target: string, props: T) => T
-) => {
-  updateWidgetTimeline(name, [new Date()], widget, props || ({} as T), updateFunction);
-};
+  widget: (props: PropsType, context: WidgetEnvironment<ConfigurationType>) => React.JSX.Element,
+  initialProps?: PropsType
+): Widget<PropsType, ConfigurationType> {
+  return new Widget<PropsType, ConfigurationType>(name, widget, initialProps);
+}
+
+/**
+ * Creates a Live Activity Factory for managing Live Activities of a specific type.
+ * @param name The Live Activity name. Must match the `'name'` field in your widget configuration in the app config.
+ * @param liveActivity The Live Activity component, marked with the `'widget'` directive.
+ */
+export function createLiveActivity<T extends object = object>(
+  name: string,
+  liveActivity: LiveActivityComponent<T>
+): LiveActivityFactory<T> {
+  return new LiveActivityFactory<T>(name, liveActivity);
+}
 
 /**
  * Adds a listener for widget interaction events (for example, button taps).
@@ -114,7 +240,25 @@ export const updateWidgetSnapshot = <T extends object>(
  * @return An event subscription that can be used to remove the listener.
  */
 export function addUserInteractionListener(
-  listener: ExpoWidgetsEvents['onUserInteraction']
+  listener: ExpoWidgetsEvents['onExpoWidgetsUserInteraction']
 ): EventSubscription {
-  return ExpoWidgetModule.addListener('onUserInteraction', listener);
+  return ExpoWidgetsModule.addListener('onExpoWidgetsUserInteraction', listener);
 }
+
+/**
+ * Adds a listener for push-to-start token events.
+ * This token can be used to start live activities remotely via APNs.
+ * @param listener Callback function to handle push-to-start token events.
+ * @return An event subscription that can be used to remove the listener.
+ */
+export function addPushToStartTokenListener(
+  listener: ExpoWidgetsEvents['onExpoWidgetsPushToStartTokenReceived']
+): EventSubscription {
+  return ExpoWidgetsModule.addListener('onExpoWidgetsPushToStartTokenReceived', listener);
+}
+
+/**
+ * A directory that can be used to store shared images for widgets.
+ * The contents of this directory are accessible by both the main app and widgets.
+ */
+export const widgetsDirectory = ExpoWidgetsModule.widgetsDirectory;

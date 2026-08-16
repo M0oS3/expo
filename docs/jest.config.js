@@ -5,10 +5,17 @@ const jestConfig = {
   displayName: 'docs',
   testEnvironment: 'jsdom',
   testMatch: ['**/*.test.(js|ts|tsx)'],
-  setupFilesAfterEnv: ['@testing-library/jest-dom/jest-globals'],
+  setupFilesAfterEnv: [
+    '@testing-library/jest-dom/jest-globals',
+    '<rootDir>/jest.axe-setup.ts',
+    '<rootDir>/jest.jsdom-setup.ts',
+  ],
   clearMocks: true,
   moduleNameMapper: {
     '^~/(.*)$': '<rootDir>/$1',
+    // Stub react-intl in tests so components that call useIntl() don't
+    // require an <IntlProvider> ancestor. See __mocks__/react-intl.tsx.
+    '^react-intl$': '<rootDir>/__mocks__/react-intl.tsx',
     // note(simek): force Jest to use non ESM bundle
     '^@radix-ui/react-dropdown-menu$':
       '<rootDir>/node_modules/@radix-ui/react-dropdown-menu/dist/index.js',
@@ -20,8 +27,15 @@ const jestConfig = {
     '^nanoid/index.browser.js$': '<rootDir>/node_modules/nanoid/index.browser.cjs',
     '^nanoid$': '<rootDir>/node_modules/nanoid/index.cjs',
     '^nanoid/non-secure$': '<rootDir>/node_modules/nanoid/non-secure/index.cjs',
+    // c15t (used by our cookie consent) bundles CSS modules that jsdom cannot parse
+    '^@expo/styleguide-cookie-consent$':
+      '<rootDir>/node_modules/@expo/styleguide-cookie-consent/mock.js',
   },
   transform: {},
+  // next/jest's default `transform` runs SWC on `.mjs` and converts ESM
+  // exports to CJS-style `Object.defineProperty(exports, ...)`, which then
+  // links as zero named exports. Skip transforming native ESM files.
+  transformIgnorePatterns: ['\\.mjs$'],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
 };
 

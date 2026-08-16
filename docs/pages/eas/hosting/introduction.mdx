@@ -10,6 +10,8 @@ import { Cloud01Icon } from '@expo/styleguide-icons/outline/Cloud01Icon';
 import { BoxLink } from '~/ui/components/BoxLink';
 import { Collapsible } from '~/ui/components/Collapsible';
 import { NoIcon, YesIcon } from '~/ui/components/DocIcons';
+import { FAQ } from '~/ui/components/FAQ';
+import { RelatedSkills } from '~/ui/components/RelatedSkills';
 import { Terminal } from '~/ui/components/Snippet';
 
 **EAS Hosting** is a service from EAS (Expo Application Services) for quickly deploying your web projects built using [Expo Router](/router/introduction/) and React Native web. It seamlessly integrates with the Expo CLI, allowing you to automate the deployment of API routes, server functions, and server-side assets.
@@ -18,15 +20,30 @@ EAS Hosting offers the fastest path from `npx create-expo-app` to a fully deploy
 
 ## Quick start
 
+> **info** The `eas` commands below require EAS CLI. See [How to install EAS CLI](/eas/cli/#installation) for more information.
+
 To deploy your web app, you need to create a static build of your web project. Run the following command to export your web project into a **dist** directory:
 
-<Terminal cmd={['$ npx expo export --platform web']} />
+<Terminal
+  cmd={{
+    npm: ['$ npx expo export --platform web'],
+    yarn: ['$ yarn expo export --platform web'],
+    pnpm: ['$ pnpm expo export --platform web'],
+    bun: ['$ bun expo export --platform web'],
+  }}
+/>
 
 To publish your web app, run the following command:
 
 <Terminal cmd={['$ eas deploy']} />
 
 Once your deployment is complete, the EAS CLI will output a preview URL to access your deployed web app.
+
+### Expo Skills for AI agents
+
+If you use an AI agent, install [Expo Skills](/skills/) to teach it how to deploy your web app and API routes:
+
+<RelatedSkills names={['eas-hosting']} />
 
 ## Why EAS Hosting
 
@@ -54,6 +71,8 @@ EAS Hosting addresses these limitations by providing a unified deployment experi
 | Already have established web infrastructure that meets your needs                                                                                       | <NoIcon />     |
 
 ## Frequently asked questions (FAQ)
+
+<FAQ>
 
 <Collapsible summary="What web output modes can I use with EAS Hosting?">
 
@@ -132,6 +151,8 @@ For more information, see the [Web deployments with EAS Workflows](/eas/hosting/
 
 </Collapsible>
 
+</FAQ>
+
 ## Get started
 
 <BoxLink
@@ -151,7 +172,7 @@ For more information, see the [Web deployments with EAS Workflows](/eas/hosting/
 <BoxLink
   title="Configure environment variables"
   description="Use environment variables in your web and server code."
-  href="/eas/hosting/environment-variables"
+  href="/eas/environment-variables/usage/#using-environment-variables-with-eas-hosting"
   Icon={Cloud01Icon}
 />
 

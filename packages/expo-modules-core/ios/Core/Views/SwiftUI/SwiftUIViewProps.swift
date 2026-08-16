@@ -7,6 +7,7 @@ internal let GLOBAL_EVENT_NAME = "onGlobalEvent"
 extension ExpoSwiftUI {
   public enum IgnoreSafeArea: String, Enumerable {
     case all
+    case container
     case keyboard
   }
 
@@ -33,6 +34,11 @@ extension ExpoSwiftUI {
      An array of views passed by React as children.
      */
     public var children: [any AnyChild]?
+
+    /**
+     Proxy for controlling the shadow node (Yoga layout) of the view.
+     */
+    public internal(set) var shadowNodeProxy: ShadowNodeProxy = ShadowNodeProxy()
 
     public internal(set) weak var appContext: AppContext?
 

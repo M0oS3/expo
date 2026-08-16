@@ -7,6 +7,7 @@ import expo.modules.core.utilities.VRUtilities
 import expo.modules.devmenu.DevToolsSettings
 import expo.modules.devmenu.compose.DevMenuAction
 import expo.modules.devmenu.compose.DevMenuActionHandler
+import expo.modules.devmenu.compose.DevMenuState
 import expo.modules.devmenu.compose.newtheme.NewAppTheme
 import expo.modules.devmenu.compose.primitives.Divider
 import expo.modules.devmenu.compose.primitives.NewText
@@ -18,7 +19,8 @@ import expo.modules.devmenu.compose.primitives.ToggleSwitch
 fun ToolsSection(
   onAction: DevMenuActionHandler,
   devToolsSettings: DevToolsSettings,
-  showFab: Boolean
+  showFab: Boolean,
+  hasComponentSwitcher: Boolean = false
 ) {
   Section.Header(
     "TOOLS"
@@ -28,6 +30,32 @@ fun ToolsSection(
 
   RoundedSurface {
     Column {
+      if (hasComponentSwitcher) {
+        NewMenuButton(
+          withSurface = false,
+          icon = {
+            MenuIcons.Layers(
+              size = 20.dp,
+              tint = NewAppTheme.colors.icon.tertiary
+            )
+          },
+          content = {
+            NewText(text = "Components")
+          },
+          rightComponent = {
+            MenuIcons.ChevronRight(
+              size = 16.dp,
+              tint = NewAppTheme.colors.icon.tertiary
+            )
+          },
+          onClick = {
+            onAction(DevMenuAction.OpenSubScreen(DevMenuState.SubScreen.Components))
+          }
+        )
+
+        Divider(thickness = 0.5.dp)
+      }
+
       NewMenuButton(
         withSurface = false,
         icon = {
@@ -38,7 +66,7 @@ fun ToolsSection(
         },
         content = {
           NewText(
-            text = "Performance monitor"
+            text = "Toggle performance monitor"
           )
         },
         onClick = {
@@ -58,7 +86,7 @@ fun ToolsSection(
         },
         content = {
           NewText(
-            text = "Element inspector"
+            text = "Toggle element inspector"
           )
         },
         onClick = {
@@ -71,14 +99,14 @@ fun ToolsSection(
       NewMenuButton(
         withSurface = false,
         icon = {
-          MenuIcons.Bug(
+          MenuIcons.Code(
             size = 20.dp,
             tint = NewAppTheme.colors.icon.tertiary
           )
         },
         content = {
           NewText(
-            text = "JS debugger"
+            text = "Open DevTools"
           )
         },
         onClick = {
@@ -86,31 +114,50 @@ fun ToolsSection(
         }
       )
 
-      // TODO(@lukmccall): Re-enable when toggling fast refresh is not longer crashing app
-//      Divider(thickness = 0.5.dp)
-//
-//      NewMenuButton(
-//        withSurface = false,
-//        icon = {
-//          MenuIcons.Refresh(
-//            size = 20.dp,
-//            tint = NewAppTheme.colors.icon.tertiary
-//          )
-//        },
-//        content = {
-//          NewText(
-//            text = "Fast Refresh"
-//          )
-//        },
-//        rightComponent = {
-//          ToggleSwitch(
-//            isToggled = devToolsSettings.isHotLoadingEnabled
-//          )
-//        },
-//        onClick = {
-//          onAction(DevMenuAction.ToggleFastRefresh(!devToolsSettings.isHotLoadingEnabled))
-//        }
-//      )
+      Divider(thickness = 0.5.dp)
+
+      NewMenuButton(
+        withSurface = false,
+        icon = {
+          MenuIcons.Gear(
+            size = 20.dp,
+            tint = NewAppTheme.colors.icon.tertiary
+          )
+        },
+        content = {
+          NewText(
+            text = "Open React Native dev menu"
+          )
+        },
+        onClick = {
+          onAction(DevMenuAction.OpenReactNativeDevMenu)
+        }
+      )
+
+      Divider(thickness = 0.5.dp)
+
+      NewMenuButton(
+        withSurface = false,
+        icon = {
+          MenuIcons.Refresh(
+            size = 20.dp,
+            tint = NewAppTheme.colors.icon.tertiary
+          )
+        },
+        content = {
+          NewText(
+            text = "Fast Refresh"
+          )
+        },
+        rightComponent = {
+          ToggleSwitch(
+            isToggled = devToolsSettings.isHotLoadingEnabled
+          )
+        },
+        onClick = {
+          onAction(DevMenuAction.ToggleFastRefresh(!devToolsSettings.isHotLoadingEnabled))
+        }
+      )
 
       // Hide FAB toggle on Quest devices since FAB is always on there
       if (!VRUtilities.isQuest()) {
@@ -126,7 +173,7 @@ fun ToolsSection(
           },
           content = {
             NewText(
-              text = "Action button"
+              text = "Tools button"
             )
           },
           rightComponent = {
